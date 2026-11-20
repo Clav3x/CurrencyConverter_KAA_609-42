@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CurrencyConverter.MainPage"
+             BackgroundColor="#1C1C1E"
+             Title="Конвертер валют"
+             Shell.NavBarIsVisible="False">
+
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="18">
+
+            <Label Text="Конвертер валют"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   TextColor="White"
+                   HorizontalOptions="Center" />
+
+            <Frame CornerRadius="14"
+                   BackgroundColor="White"
+                   Padding="16"
+                   HasShadow="False">
+                <DatePicker Date="{Binding SelectedDate, Mode=TwoWay}"
+                            TextColor="Black" />
+            </Frame>
+
+            <Frame CornerRadius="14"
+                   BackgroundColor="White"
+                   Padding="16"
+                   HasShadow="False">
+                <VerticalStackLayout Spacing="12">
+                    <Entry Text="{Binding Amount1, Mode=TwoWay}"
+                           Placeholder="Сумма"
+                           Keyboard="Numeric"
+                           TextColor="Black"
+                           FontSize="20" />
+                    <Picker ItemsSource="{Binding Currencies}"
+                            SelectedItem="{Binding SelectedCurrency1, Mode=TwoWay}"
+                            Title="Из валюты"
+                            TextColor="Black" />
+                </VerticalStackLayout>
+            </Frame>
+            
+            <Frame CornerRadius="14"
+                   BackgroundColor="White"
+                   Padding="16"
+                   HasShadow="False">
+                <VerticalStackLayout Spacing="12">
+                    <Entry Text="{Binding Amount2, Mode=TwoWay}"
+                           Placeholder="Сумма"
+                           Keyboard="Numeric"
+                           TextColor="Black"
+                           FontSize="20" />
+                    <Picker ItemsSource="{Binding Currencies}"
+                            SelectedItem="{Binding SelectedCurrency2, Mode=TwoWay}"
+                            Title="В валюту"
+                            TextColor="Black" />
+                </VerticalStackLayout>
+            </Frame>
+
+          
+
+            <Label Text="{Binding Hint}"
+                   FontSize="14"
+                   TextColor="#9E9EA3"
+                   HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
