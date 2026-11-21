@@ -22,10 +22,10 @@ jobs:
         run: dotnet test CurrencyConverter.Tests/CurrencyConverter.Tests.csproj -c Release
 
       - name: Publish Windows exe
-        run: dotnet publish CurrencyConverter.csproj -c Release -f net10.0-windows10.0.19041.0 -p:RuntimeIdentifier=win-x64
+        run: dotnet publish CurrencyConverter/CurrencyConverter.csproj -c Release -f net10.0-windows10.0.19041.0 -p:RuntimeIdentifier=win-x64
 
       - name: Upload exe as artifact
         uses: actions/upload-artifact@v4
         with:
           name: CurrencyConverter-win
-          path: bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/
+          path: CurrencyConverter/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/
