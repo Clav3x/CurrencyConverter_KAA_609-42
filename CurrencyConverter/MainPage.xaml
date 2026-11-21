@@ -16,13 +16,18 @@
                    TextColor="White"
                    HorizontalOptions="Center" />
 
-            <Frame CornerRadius="14"
-                   BackgroundColor="White"
-                   Padding="16"
-                   HasShadow="False">
+            <Grid>
+                
+                <Label Text="{Binding SelectedDate, StringFormat='Изменить дату: {0:dd.MM.yyyy}'}"
+                       TextColor="#4A9FFF"
+                       TextDecorations="Underline"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Start"
+                       VerticalOptions="Center" />
                 <DatePicker Date="{Binding SelectedDate, Mode=TwoWay}"
-                            TextColor="Black" />
-            </Frame>
+                            Opacity="0.05" 
+                            />
+            </Grid>
 
             <Frame CornerRadius="14"
                    BackgroundColor="White"
@@ -35,6 +40,7 @@
                            TextColor="Black"
                            FontSize="20" />
                     <Picker ItemsSource="{Binding Currencies}"
+                            ItemDisplayBinding="{Binding Name}"
                             SelectedItem="{Binding SelectedCurrency1, Mode=TwoWay}"
                             Title="Из валюты"
                             TextColor="Black" />
@@ -52,6 +58,7 @@
                            TextColor="Black"
                            FontSize="20" />
                     <Picker ItemsSource="{Binding Currencies}"
+                            ItemDisplayBinding="{Binding Name}"
                             SelectedItem="{Binding SelectedCurrency2, Mode=TwoWay}"
                             Title="В валюту"
                             TextColor="Black" />

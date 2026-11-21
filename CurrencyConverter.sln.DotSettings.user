@@ -1,7 +1,7 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=53a233d9_002D40ab_002D4873_002D8a5a_002D92a0ec50f14d/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="MainViewModelTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
   &lt;TestAncestor&gt;
-    &lt;TestId&gt;MSTest::D8D58B2D-AEF8-77A3-1A8A-DF5EDFFF7D6C::net10.0::CurrencyConverter.Tests.MainViewModelTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::D8D58B2D-AEF8-77A3-1A8A-DF5EDFFF7D6C::net10.0::CurrencyConverter.Tests.MainViewModelTests&lt;/TestId&gt;
   &lt;/TestAncestor&gt;
 &lt;/SessionState&gt;</s:String>
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=58c56b00_002Df81e_002D48fd_002Da74f_002Dc8e84271fcf4/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Continuous Testing" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;

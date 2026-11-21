@@ -1,16 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-namespace CurrencyConverter;
+﻿namespace CurrencyConverter;
 
 public partial class App : Application
 {
-    public App()
+    public App(MainPage mainPage)
     {
         InitializeComponent();
-    }
-
-    protected override Window CreateWindow(IActivationState? activationState)
-    {
-        return new Window(new AppShell());
+        MainPage = mainPage;
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CurrencyConverter.Services;
+using CurrencyConverter.ViewModels;
 
 namespace CurrencyConverter;
 
@@ -14,10 +15,10 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
-
-#if DEBUG
-        builder.Logging.AddDebug();
-#endif
+        builder.Services.AddSingleton<HttpClient>();
+        builder.Services.AddSingleton<IRateService, ApiRateService>();
+        builder.Services.AddSingleton<MainViewModel>();
+        builder.Services.AddTransient<MainPage>();
 
         return builder.Build();
     }

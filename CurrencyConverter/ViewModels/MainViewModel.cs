@@ -1,5 +1,4 @@
-using System.Globalization;
-using System.Linq;
+using System.Collections.ObjectModel;
 using CurrencyConverter.Models;
 using CurrencyConverter.Services;
 
@@ -7,235 +6,162 @@ namespace CurrencyConverter.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    private IRateService _rateService;
-
-    private DailyRates? _rates;
-    private DateTime _selectedDate;
-    private string? _hint;
-    private List<string>? _currencies;
-    
-    private string? _amount1;
-    private string? _amount2;
-    private string? _selectedCurrency1;
-    private string? _selectedCurrency2;
+    private readonly IRateService _rateService;
     private bool _isConverting;
 
-    public DailyRates? Rates
-    {
-        get { return _rates; }
-        set { SetProperty(ref _rates, value); }
-    }
-    
-    public List<string>? Currencies
-    {
-        get { return _currencies; }
-        set { SetProperty(ref _currencies, value); }
-    }
-    
-    public string? Hint
-    {
-        get { return _hint; }
-        set { SetProperty(ref _hint, value); }
-    }
+
+    public ObservableCollection<Valute> Currencies { get; } = new();
     
 
+    private DateTime _selectedDate = DateTime.Today;
     public DateTime SelectedDate
     {
-        get { return _selectedDate; }
+        get => _selectedDate;
         set
         {
-            if (SetProperty(ref _selectedDate, value))
-            {
-                _ = LoadRatesAsync();
-            }
+            SetProperty(ref _selectedDate, value);
+            _ = LoadRatesAsync();
         }
     }
 
-    
-    public MainViewModel()
-        : this(new ApiRateService())
+    private string _amount1 = "";
+    public string Amount1
     {
+        get => _amount1;
+        set
+        {
+            SetProperty(ref _amount1, value);
+            Convert(1);
+        }
     }
+
+    private string _amount2 = "";
+    public string Amount2
+    {
+        get => _amount2;
+        set
+        {
+            SetProperty(ref _amount2, value);
+            Convert(2);
+        }
+    }
+
+    private Valute? _selectedCurrency1;
+    public Valute? SelectedCurrency1
+    {
+        get => _selectedCurrency1;
+        set
+        {
+            SetProperty(ref _selectedCurrency1, value);
+            Convert(1);
+        }
+    }
+
+    private Valute? _selectedCurrency2;
+    public Valute? SelectedCurrency2
+    {
+        get => _selectedCurrency2;
+        set
+        {
+            SetProperty(ref _selectedCurrency2, value);
+            Convert(1);
+        }
+    }
+
+    private string _hint = "Загрузка курсов...";
+    public string Hint
+    {
+        get => _hint;
+        set => SetProperty(ref _hint, value);
+    }
+    
 
     public MainViewModel(IRateService rateService)
     {
         _rateService = rateService;
-        SelectedDate = DateTime.Today;
+        _ = LoadRatesAsync();
     }
+    
 
     public async Task LoadRatesAsync()
     {
-        DailyRates? rates = null;
-        DateTime date = SelectedDate;
-        int daysChecked = 0;
+        DateTime day = SelectedDate;
 
-        while (rates == null && daysChecked < 14)
+        for (int attempt = 0; attempt < 14; attempt++)
         {
-            rates = await _rateService.GetRatesAsync(date);
+            DailyRates? rates = await _rateService.GetRatesAsync(day);
 
-            if (rates == null)
+            if (rates is null)
             {
-                date = date.AddDays(-1);
-                daysChecked++;
+                Hint = $"Нет данных на {day:dd.MM.yyyy}, пробую день раньше...";
+                day = day.AddDays(-1);
+                continue;
             }
-        }
 
-        if (rates == null)
-        {
-            Hint = "Курсы не нашлись за 14 дней до " + SelectedDate.ToString("dd.MM.yyyy");
-            
+            Currencies.Clear();
+            foreach (Valute v in rates.Valute.Values)
+                Currencies.Add(v);
+            AddRub();
+
+     
+            if (SelectedCurrency1 is null || !Currencies.Contains(SelectedCurrency1))
+                SelectedCurrency1 = Currencies.FirstOrDefault(c => c.CharCode == "RUB");
+            if (SelectedCurrency2 is null || !Currencies.Contains(SelectedCurrency2))
+                SelectedCurrency2 = Currencies.FirstOrDefault(c => c.CharCode == "USD");
+
+            Hint = $"Курсы на {day:dd.MM.yyyy}";
+            Convert(1);
             return;
         }
 
-        AddRub(rates);
-
-        Rates = rates;
-        Currencies = rates.Valute.Keys.OrderBy(x => x).ToList();
-        Hint = "Курс на " + rates.Date.ToString("dd.MM.yyyy");
-        if (SelectedCurrency1 == null)
-        {
-            SelectedCurrency1 = "RUB";
-        }
-
-        if (SelectedCurrency2 == null)
-        {
-            SelectedCurrency2 = "USD";
-        }
-
-        Convert(1);
+        Hint = "Не удалось загрузить курсы даже за 14 дней назад";
     }
 
-    private void AddRub(DailyRates rates)
+    private void AddRub()
     {
-        if (rates.Valute.ContainsKey("RUB"))
+        Currencies.Insert(0, new Valute
         {
-            return;
-        }
-
-        Valute rub = new Valute();
-        rub.CharCode = "RUB";
-        rub.Nominal = 1;
-        rub.Name = "Российский рубль";
-        rub.Value = 1;
-        rates.Valute.Add("RUB", rub);
-        
+            CharCode = "RUB",
+            Nominal = 1,
+            Name = "Российский рубль",
+            Value = 1.0
+        });
     }
-    
-    
-    public string? Amount1
+
+  
+
+    public void Convert(int direction)
     {
-        get { return _amount1; }
-        set
+        if (_isConverting) return;
+
+        Valute? c1 = SelectedCurrency1;
+        Valute? c2 = SelectedCurrency2;
+        if (c1 is null || c2 is null) return;
+
+        _isConverting = true;
+        try
         {
-            if (SetProperty(ref _amount1, value))
+            if (direction == 1)
             {
-                Convert(1);
-            }
-        }
-    }
-    public string? Amount2
-    {
-        get { return _amount2; }
-        set
-        {
-            if (SetProperty(ref _amount2, value))
-            {
-                Convert(2);
-            }
-        }
-    }
-    
-    public string? SelectedCurrency1
-    {
-        get { return _selectedCurrency1; }
-        set
-        {
-            if (SetProperty(ref _selectedCurrency1, value))
-            {
-                Convert(1);
-            }
-        }
-    }
-    public string? SelectedCurrency2
-    {
-        get { return _selectedCurrency2; }
-        set
-        {
-            if (SetProperty(ref _selectedCurrency2, value))
-            {
-                Convert(2);
-            }
-        }
-    }
-    
-    private void Convert(int direction)
-    {
-        if (_isConverting || Rates == null)
-        {
-            return;
-        }
-
-        if (direction == 1)
-        {
-            if (Amount1 == null || SelectedCurrency1 == null || SelectedCurrency2 == null)
-            {
-                return;
-            }
-
-            _isConverting = true;
-
-            string text = Amount1.Replace(",", ".");
-            double amount;
-
-            if (double.TryParse(text, CultureInfo.InvariantCulture, out amount))
-            {
-                Valute v1 = Rates.Valute[SelectedCurrency1];
-                Valute v2 = Rates.Valute[SelectedCurrency2];
-
-                double price1 = v1.Value / v1.Nominal;
-                double price2 = v2.Value / v2.Nominal;
-
-                double result = amount * price1 / price2;
-
-                Amount2 = Math.Round(result, 2).ToString(CultureInfo.InvariantCulture);
+                if (double.TryParse(Amount1, out double a1))
+                {
+                    double rubles = a1 * c1.Value / c1.Nominal;
+                    double result = Math.Round(rubles * c2.Nominal / c2.Value, 4);
+                    Amount2 = result.ToString();
+                }
             }
             else
             {
-                Amount2 = "";
+                if (double.TryParse(Amount2, out double a2))
+                {
+                    double rubles = a2 * c2.Value / c2.Nominal;
+                    double result = Math.Round(rubles * c1.Nominal / c1.Value, 4);
+                    Amount1 = result.ToString();
+                }
             }
-
-            _isConverting = false;
         }
-
-        if (direction == 2)
+        finally
         {
-            if (Amount2 == null || SelectedCurrency2 == null || SelectedCurrency1 == null)
-            {
-                return;
-            }
-
-            _isConverting = true;
-
-            string text = Amount2.Replace(",", ".");
-            double amount;
-
-            if (double.TryParse(text, CultureInfo.InvariantCulture, out amount))
-            {
-                Valute v1 = Rates.Valute[SelectedCurrency1];
-                Valute v2 = Rates.Valute[SelectedCurrency2];
-
-                double price1 = v1.Value / v1.Nominal;
-                double price2 = v2.Value / v2.Nominal;
-
-                double result = amount * price2 / price1;
-
-                Amount1 = Math.Round(result, 2).ToString(CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                Amount1 = "";
-            }
-
             _isConverting = false;
         }
     }

@@ -1,95 +1,134 @@
-using CurrencyConverter.Models;
-using CurrencyConverter.ViewModels;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Globalization;
+using CurrencyConverter.Models;     
+using CurrencyConverter.Services; 
+using CurrencyConverter.ViewModels; 
+using Moq;
+using Xunit;
+using Assert = Xunit.Assert;
 
 namespace CurrencyConverter.Tests;
 
-[TestClass]
 public class MainViewModelTests
 {
-    private DailyRates MakeRates(DateTime date, double usdValue)
+    private static DailyRates MakeRates(double usd = 80.0) => new()
     {
-        DailyRates rates = new DailyRates();
-        rates.Date = date;
-        rates.Valute = new Dictionary<string, Valute>();
+        Valute = new Dictionary<string, Valute>
+        {
+            ["USD"] = new Valute { CharCode = "USD", Nominal = 1, Name = "Доллар США", Value = usd }
+        }
+    };
 
-        Valute usd = new Valute();
-        usd.CharCode = "USD";
-        usd.Nominal = 1;
-        usd.Name = "Доллар США";
-        usd.Value = usdValue;
-        rates.Valute.Add("USD", usd);
 
-        return rates;
-    }
-
-    private MainViewModel MakeVmWithUsd80()
+    private static MainViewModel CreateVm(Mock<IRateService> mock)
     {
-        DateTime date = new DateTime(2026, 1, 15);
-        DailyRates rates = MakeRates(date, 80);
+        var vm = new MainViewModel(mock.Object);
+        
+        mock.Invocations.Clear();
 
-        Dictionary<DateTime, DailyRates> byDate = new Dictionary<DateTime, DailyRates>();
-        byDate.Add(date, rates);
-
-        MainViewModel vm = new MainViewModel(new FakeRateService(byDate));
-        vm.SelectedDate = date;
         return vm;
     }
 
-    [TestMethod]
-    public void Подсказка_ПоказываетДатуНайденногоКурса_ЕслиНаВыбраннуюДатуКурсовНет()
+    [Fact]
+    public async Task LoadRates_FillsCurrencies_AndPutsRubFirst()
     {
-        DateTime found = new DateTime(2026, 1, 15);
-        DailyRates rates = MakeRates(found, 80);
+        var mock = new Mock<IRateService>();
+        var vm = CreateVm(mock);
 
-        Dictionary<DateTime, DailyRates> byDate = new Dictionary<DateTime, DailyRates>();
-        byDate.Add(found, rates);
+        mock.Setup(s => s.GetRatesAsync(It.IsAny<DateTime>())).ReturnsAsync(MakeRates());
 
-        MainViewModel vm = new MainViewModel(new FakeRateService(byDate));
-        vm.SelectedDate = new DateTime(2026, 1, 20);
+        await vm.LoadRatesAsync();
 
-        Assert.AreEqual("Курс на 15.01.2026", vm.Hint);
+        Assert.Equal(2, vm.Currencies.Count);           
+        Assert.Equal("RUB", vm.Currencies[0].CharCode);
     }
 
-    [TestMethod]
-    public void Подсказка_СообщаетОбОтсутствииКурсов_ЕслиНичегоНеНашлось()
+    [Fact]
+    public async Task Convert_Direction1_RubToUsd_UsesRate()
     {
-        MainViewModel vm = new MainViewModel(new FakeRateService(new Dictionary<DateTime, DailyRates>()));
+        var mock = new Mock<IRateService>();
+        var vm = CreateVm(mock);
+        mock.Setup(s => s.GetRatesAsync(It.IsAny<DateTime>())).ReturnsAsync(MakeRates(usd: 80));
 
-        vm.SelectedDate = new DateTime(2026, 1, 20);
-
-        Assert.AreEqual("Курсы не нашлись за 14 дней до 20.01.2026", vm.Hint);
-    }
-
-    [TestMethod]
-    public void Конвертация_ПереводитИзРублейВДоллары_ПослеВводаСуммы()
-    {
-        MainViewModel vm = MakeVmWithUsd80();
-
-        vm.SelectedCurrency1 = "RUB";
-        vm.SelectedCurrency2 = "USD";
-        vm.Amount1 = "1000";
-
-        Assert.AreEqual("12.5", vm.Amount2);
-    }
-
-    [TestMethod]
-    public void Конвертация_ПереводитИзДолларовВРубли_ПослеВводаСуммы()
-    {
-        MainViewModel vm = MakeVmWithUsd80();
-
-        vm.SelectedCurrency1 = "USD";
-        vm.SelectedCurrency2 = "RUB";
+        await vm.LoadRatesAsync();
+        vm.SelectedCurrency1 = vm.Currencies.First(c => c.CharCode == "RUB");
+        vm.SelectedCurrency2 = vm.Currencies.First(c => c.CharCode == "USD");
         vm.Amount1 = "100";
 
-        Assert.AreEqual("8000", vm.Amount2);
+        vm.Convert(1);
+
+        double actual = double.Parse(vm.Amount2, CultureInfo.CurrentCulture);
+        Assert.Equal(1.25, actual, 4);                
     }
 
-    [TestMethod]
-    public void СписокВалют_СодержитРубль_ПослеЗагрузки()
+    [Fact]
+    public async Task Convert_Direction2_UsdToRub_IsSymmetric()
     {
-        MainViewModel vm = MakeVmWithUsd80();
+        var mock = new Mock<IRateService>();
+        var vm = CreateVm(mock);
+        mock.Setup(s => s.GetRatesAsync(It.IsAny<DateTime>())).ReturnsAsync(MakeRates(usd: 80));
 
-        Assert.AreEqual("RUB, USD", string.Join(", ", vm.Currencies));
+        await vm.LoadRatesAsync();
+        vm.SelectedCurrency1 = vm.Currencies.First(c => c.CharCode == "RUB");
+        vm.SelectedCurrency2 = vm.Currencies.First(c => c.CharCode == "USD");
+        vm.Amount2 = "100";
+
+        vm.Convert(2);
+
+        double actual = double.Parse(vm.Amount1, CultureInfo.CurrentCulture);
+        Assert.Equal(8000, actual, 4);                
+    }
+
+    [Fact]
+    public async Task LoadRates_RollsBack_WhenDateUnavailable()
+    {
+        var mock = new Mock<IRateService>();
+        var vm = CreateVm(mock);                       
+
+        mock.Setup(s => s.GetRatesAsync(DateTime.Today)).ReturnsAsync((DailyRates?)null);
+        mock.Setup(s => s.GetRatesAsync(DateTime.Today.AddDays(-1))).ReturnsAsync(MakeRates());
+
+        await vm.LoadRatesAsync();
+        
+        mock.Verify(s => s.GetRatesAsync(It.IsAny<DateTime>()), Times.Exactly(2));
+        mock.VerifyNoOtherCalls();
+        Assert.Equal(2, vm.Currencies.Count);
+    }
+
+    [Fact]
+    public async Task Convert_Recalculates_WhenRatesChange()
+    {
+        var mock = new Mock<IRateService>();
+        var vm = CreateVm(mock);
+
+        mock.Setup(s => s.GetRatesAsync(It.IsAny<DateTime>())).ReturnsAsync(MakeRates(usd: 80));
+        await vm.LoadRatesAsync();
+        vm.SelectedCurrency1 = vm.Currencies.First(c => c.CharCode == "RUB");
+        vm.SelectedCurrency2 = vm.Currencies.First(c => c.CharCode == "USD");
+        vm.Amount1 = "100";
+        vm.Convert(1);
+        double first = double.Parse(vm.Amount2, CultureInfo.CurrentCulture);
+        Assert.Equal(1.25, first, 4);
+
+        mock.Setup(s => s.GetRatesAsync(It.IsAny<DateTime>())).ReturnsAsync(MakeRates(usd: 40));
+        await vm.LoadRatesAsync();
+        vm.Convert(1);
+        double second = double.Parse(vm.Amount2, CultureInfo.CurrentCulture);
+        Assert.Equal(2.5, second, 4);               
+        Assert.NotEqual(first, second);
+    }
+
+    [Fact]
+    public async Task Convert_GarbageInput_DoesNotBreak()
+    {
+        var mock = new Mock<IRateService>();
+        var vm = CreateVm(mock);
+        mock.Setup(s => s.GetRatesAsync(It.IsAny<DateTime>())).ReturnsAsync(MakeRates());
+
+        await vm.LoadRatesAsync();
+        vm.Amount1 = "12abc";
+
+        vm.Convert(1);
+
+        Assert.True(string.IsNullOrEmpty(vm.Amount2));
     }
 }
