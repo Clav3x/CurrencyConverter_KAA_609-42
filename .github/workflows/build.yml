@@ -19,7 +19,7 @@ jobs:
         run: dotnet workload install maui
 
       - name: Run tests
-        run: dotnet test Tests/Tests.csproj -c Release
+        run: dotnet test CurrencyConverter.Tests/CurrencyConverter.Tests.csproj -c Release
 
       - name: Publish Windows exe
         run: dotnet publish CurrencyConverter.csproj -c Release -f net10.0-windows10.0.19041.0 -p:RuntimeIdentifier=win-x64
